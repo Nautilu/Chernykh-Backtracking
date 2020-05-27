@@ -1,0 +1,207 @@
+{10. По системе двусторонних дорог определить, можно ли,
+закрыв какие-либо три из них, добиться того, чтобы из города А
+нельзя было попасть в город Б.}
+
+
+unit UnitMain;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, Grids, StdCtrls, URoads, ExtCtrls;
+
+
+type
+  TForm1 = class(TForm)
+    sgRoads: TStringGrid;
+    rgAction: TRadioGroup;
+    pnlControl: TPanel;
+    btnDoAction: TButton;
+    btnTask: TButton;
+    btnShowTask: TButton;
+    procedure btnShowTaskClick(Sender: TObject);
+    procedure btnDoActionClick(Sender: TObject);
+    procedure ShowRoads(sgRoads: TStringGrid; var R:TMatr; N: TIndex);
+    procedure FormCreate(Sender: TObject);
+    procedure btnTaskClick(Sender: TObject);
+  private
+
+  public
+
+  end;
+
+var
+  Form1: TForm1;
+  Roads: TMatr;
+  N: Integer;
+  del: TDel;
+
+implementation
+
+{$R *.dfm}
+
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Init(Roads);
+  N:= 0;
+  rgAction.ItemIndex:= 0;
+end;
+
+procedure TForm1.btnShowTaskClick(Sender: TObject);
+begin
+  ShowMessage('По системе двусторонних дорог определить, можно ли, '+
+    'закрыв какие-либо три из них, добиться того, чтобы из города А ' +
+    'нельзя было попасть в город Б.');
+end;
+
+procedure TForm1.ShowRoads(sgRoads: TStringGrid; var R:TMatr; N: TIndex);
+var
+  i, j:Integer;
+begin
+  sgRoads.ColCount:= N+1;
+  sgRoads.RowCount:= N+1;
+  for i:=1 to N+1 do
+    begin
+      sgRoads.Cells[0,i]:= IntToStr(i);
+      sgRoads.Cells[i,0]:= IntToStr(i);
+      for j:=1 to N+1 do
+        if R[i,j] then
+          sgRoads.Cells[i,j]:= '1'
+        else
+          sgRoads.Cells[i,j]:= '0';
+    end;
+end;
+
+procedure TForm1.btnDoActionClick(Sender: TObject);
+var
+  Index: TIndex;
+  num,num2: Integer;
+begin
+  case rgAction.ItemIndex of
+    0 : if TryStrToInt(InputBox('Генерация системы дорог', 'Введите количество городов', '6'),num) then
+          if num in [1..MaxN] then
+            begin
+              N:= num;
+              RandomFill(Roads,N);
+              ShowRoads(sgRoads,Roads,N);
+              sgRoads.Visible:= True;
+            end
+          else
+            ShowMessage('Число должно быть в диапазоне [1..' + IntToStr(MaxN)+']')
+        else
+          ShowMessage('Невозможно преобразовать строку в число');
+    1 :
+      begin
+        if N < MaxN then
+          begin
+            inc(N);
+            ShowRoads(sgRoads,Roads,N);
+            sgRoads.Visible:= True;
+          end
+        else
+          ShowMessage('Достигнуто максимальное число городов');
+      end;
+    2 : if N = 0 then
+          ShowMessage('Система дорог пустая')
+        else
+          if TryStrToInt(InputBox('Добавление дороги', 'Введите номер первого города', ''),num) and
+            TryStrToInt(InputBox('Добавление дороги', 'Введите номер второго города', ''),num2)
+          then
+            if (num in [1..N]) and (num2 in [1..N]) then
+                if not ChangeRoad(Roads,num,num2,True) then
+                  ShowMessage('Эта дорога существует')
+                else
+                  ShowRoads(sgRoads,Roads,N)
+            else
+              ShowMessage('Числа должно быть в диапазоне [1..' + IntToStr(N)+']')
+          else
+            ShowMessage('Невозможно преобразовать строку в число');
+
+    3 : if N = 0 then
+          ShowMessage('Система дорог пустая')
+        else
+          if TryStrToInt(InputBox('Удаление города', 'Введите номер удаляемого города', IntToStr(N)),num) then
+            if num in [1..N] then
+              begin
+                Index:= num;
+                DeleteColRow(Roads,Index,N);
+                ShowRoads(sgRoads,Roads,N);
+                sgRoads.Visible:= N > 0;
+              end
+            else
+              ShowMessage('Число должно быть в диапазоне [1..' + IntToStr(N)+']')
+          else
+            ShowMessage('Невозможно преобразовать строку в число');
+    4 : if N = 0 then
+          ShowMessage('Система дорог пустая')
+        else
+          if TryStrToInt(InputBox('Удаление дороги', 'Введите номер первого города', ''),num) and
+            TryStrToInt(InputBox('Удаление дороги', 'Введите номер второго города', ''),num2)
+          then
+            if (num in [1..N]) and (num2 in [1..N]) then
+              if num = num2 then
+                ShowMessage('Введён один и тот же город')
+              else
+                if not ChangeRoad(Roads,num,num2,False) then
+                  ShowMessage('Эта дорога не существует')
+                else
+                  ShowRoads(sgRoads,Roads,N)
+            else
+              ShowMessage('Числа должно быть в диапазоне [1..' + IntToStr(N)+']')
+          else
+            ShowMessage('Невозможно преобразовать строку в число');
+    5 : if N = 0 then
+          ShowMessage('Система дорог пустая')
+        else
+          begin
+            with sgRoads do
+              begin
+                for num:=0 to ColCount-1 do
+                  Cols[num].Clear;
+                Visible:= false;
+              end;
+            Init(Roads);
+            N:= 0;
+          end;
+  end;
+  btnTask.Visible:= N > 0;
+end;
+
+
+procedure TForm1.btnTaskClick(Sender: TObject);
+var
+  A,B: Integer;
+begin
+  if TryStrToInt(InputBox('Выбор города', 'Введите номер первого города', ''),A) and
+    TryStrToInt(InputBox('Выбор города', 'Введите номер второго города', ''),B)
+  then
+    if (A in [1..N]) and (B in [1..N]) then
+      if A = B then
+        ShowMessage('Введён один и тот же город')
+      else
+        begin
+          if not MainFind(Roads,A,B) then
+            ShowMessage('Не существует дороги между городами '+IntToStr(A)+' и '+IntToStr(B))
+          else
+            if MainTask(Roads,A,B,N,del) then
+              begin
+                ShowRoads(sgRoads,Roads,N);
+                ShowMessage('Можно'+#10#13+'Закрытые дороги: '+DelToStr(del));
+                if MessageDlg('Открыть дороги обратно?',mtConfirmation,[mbYes,mbNo],0) = mrYes then
+                  begin
+                    ReturnDel(Roads,del);
+                    ShowRoads(sgRoads,Roads,N);
+                  end;
+              end
+            else
+              ShowMessage('Нельзя');
+        end
+    else
+      ShowMessage('Числа должно быть в диапазоне [1..' + IntToStr(N)+']')
+  else
+    ShowMessage('Невозможно преобразовать строку в число');
+end;
+
+end.
